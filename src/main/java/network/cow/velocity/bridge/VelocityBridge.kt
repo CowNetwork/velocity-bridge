@@ -57,17 +57,17 @@ class VelocityBridge @Inject constructor(private val server: ProxyServer, privat
             this.sessionServer.stopSession(it.player)
         }
 
-        this.sessionServer.addStopSessionListener { uuid, reason, session ->
-            this.logger.info("Session has been stopped for player ${session.username} ($uuid) with reason $reason: $session")
+        this.sessionServer.addStopSessionListener { uuid, result, session ->
+            this.logger.info("Session has been stopped for player ${session.username} ($uuid) with reason $result: $session")
 
             // If the session has been stopped because the player disconnected (see listener above), or the player is no longer online, do nothing.
-            if (reason.cause == SessionStopCause.DISCONNECTED) return@addStopSessionListener
+            if (result.cause == SessionStopCause.DISCONNECTED) return@addStopSessionListener
             val player = this.server.getPlayer(uuid).orElse(null) ?: return@addStopSessionListener
 
             // Otherwise, build the message to kick the player with.
-            val message = reason.message
+            val message = result.message
                 .append(Component.space())
-                .append(Component.text(" ($reason)").color(NamedTextColor.DARK_GRAY))
+                .append(Component.text(" ($result)").color(NamedTextColor.DARK_GRAY))
 
             player.disconnect(message)
         }

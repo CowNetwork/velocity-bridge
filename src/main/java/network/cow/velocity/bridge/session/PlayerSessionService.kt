@@ -8,27 +8,27 @@ import java.util.UUID
  */
 abstract class PlayerSessionService {
 
-    private val stopSessionListeners = mutableListOf<(UUID, StopSessionReason, Session) -> Unit>()
+    private val stopSessionListeners = mutableListOf<(UUID, StopSessionResult, Session) -> Unit>()
 
     /**
      * Adds a listener to call, after a [Session] has been closed for any given [UUID].
      */
-    fun addStopSessionListener(listener: (UUID, StopSessionReason, Session) -> Unit) {
+    fun addStopSessionListener(listener: (UUID, StopSessionResult, Session) -> Unit) {
         this.stopSessionListeners.add(listener)
     }
 
     /**
      * Removes a listener previously added using [addStopSessionListener].
      */
-    fun removeStopSessionListener(listener: (UUID, StopSessionReason, Session) -> Unit) {
+    fun removeStopSessionListener(listener: (UUID, StopSessionResult, Session) -> Unit) {
         this.stopSessionListeners.remove(listener)
     }
 
     /**
      * Called by the [PlayerSessionService], after a [Session] for the given [uuid] has been closed.
      */
-    protected fun onStopSession(uuid: UUID, reason: StopSessionReason, session: Session) {
-        this.stopSessionListeners.forEach { it(uuid, reason, session) }
+    protected fun onStopSession(uuid: UUID, sessionResult: StopSessionResult, session: Session) {
+        this.stopSessionListeners.forEach { it(uuid, sessionResult, session) }
     }
 
     /**

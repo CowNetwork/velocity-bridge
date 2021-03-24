@@ -20,7 +20,7 @@ class InMemoryPlayerSessionService : PlayerSessionService() {
     override fun stopSession(uuid: UUID) {
         val session = this.sessions.remove(uuid) ?: return
         session.stoppedAt = getCurrentDate()
-        this.onStopSession(uuid, StopSessionReason(SessionStopCause.DISCONNECTED), session)
+        this.onStopSession(uuid, StopSessionResult(SessionStopCause.DISCONNECTED), session)
     }
 
 }

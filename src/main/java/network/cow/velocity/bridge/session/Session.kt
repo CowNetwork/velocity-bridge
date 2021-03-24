@@ -18,7 +18,7 @@ enum class SessionResponse {
     UNKNOWN
 }
 
-data class StopSessionReason(val cause: SessionStopCause, val message: Component = Component.empty())
+data class StopSessionResult(val cause: SessionStopCause, val message: Component = Component.empty())
 
 enum class SessionStopCause {
     DISCONNECTED,
