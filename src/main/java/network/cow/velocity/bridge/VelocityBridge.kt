@@ -11,7 +11,7 @@ import net.kyori.adventure.text.format.NamedTextColor
 import network.cow.velocity.bridge.session.InMemoryPlayerSessionService
 import network.cow.velocity.bridge.session.PlayerSessionService
 import network.cow.velocity.bridge.session.SessionResponse
-import network.cow.velocity.bridge.session.StopSessionReason
+import network.cow.velocity.bridge.session.SessionStopCause
 import org.slf4j.Logger
 
 /**
@@ -35,12 +35,21 @@ class VelocityBridge @Inject constructor(private val server: ProxyServer, privat
     private fun handlePlayerSessions() {
         // When a player joins the proxy, start a new session.
         this.server.eventManager.register(this, LoginEvent::class.java, PostOrder.FIRST) {
-            val result = this.sessionServer.startSession(it.player)
-            if (result.response == SessionResponse.INITIALIZED) return@register
+            val player = it.player
+            val result = this.sessionServer.startSession(player)
+            if (result.response == SessionResponse.INITIALIZED) {
+                this.logger.info("Session has been initialized for player ${player.username} (${player.uniqueId}).")
+                return@register
+            }
 
             // If the session could not be initialized, kick the player with the corresponding message.
-            val message = result.denyMessage.append(Component.text("(${result.response})").color(NamedTextColor.DARK_GRAY))
-            it.player.disconnect(message)
+            val message = result.message
+                .append(Component.space())
+                .append(Component.text("(${result.response})").color(NamedTextColor.DARK_GRAY))
+
+            player.disconnect(message)
+
+            this.logger.info("Session couldn't be initialized for player ${player.username} (${player.uniqueId}). Response: ${result.response}.")
         }
 
         // When a player disconnected, stop the current session.
@@ -49,16 +58,18 @@ class VelocityBridge @Inject constructor(private val server: ProxyServer, privat
         }
 
         this.sessionServer.addStopSessionListener { uuid, reason, session ->
+            this.logger.info("Session has been stopped for player ${session.username} ($uuid) with reason $reason: $session")
+
             // If the session has been stopped because the player disconnected (see listener above), or the player is no longer online, do nothing.
-            if (reason == StopSessionReason.DISCONNECTED) return@addStopSessionListener
+            if (reason.cause == SessionStopCause.DISCONNECTED) return@addStopSessionListener
             val player = this.server.getPlayer(uuid).orElse(null) ?: return@addStopSessionListener
 
             // Otherwise, build the message to kick the player with.
-            val message = Component.text(reason.translationKey) // TODO: translate
+            val message = reason.message
+                .append(Component.space())
                 .append(Component.text(" ($reason)").color(NamedTextColor.DARK_GRAY))
 
             player.disconnect(message)
-            this.logger.info("Session for player ${player.username} (${player.uniqueId}) has been stopped (${reason}): $session")
         }
     }
 

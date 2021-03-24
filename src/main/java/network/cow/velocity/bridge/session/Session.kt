@@ -8,9 +8,9 @@ import java.time.ZonedDateTime
  * @author Benedikt Wüller
  */
 
-data class Session(var startedAt: ZonedDateTime = getCurrentDate(), var stoppedAt: ZonedDateTime = getCurrentDate())
+data class Session(val username: String, val startedAt: ZonedDateTime = getCurrentDate(), var stoppedAt: ZonedDateTime = getCurrentDate())
 
-data class InitializePlayerSessionResponse(val response: SessionResponse = SessionResponse.UNKNOWN, val denyMessage: Component = Component.empty())
+data class InitializePlayerSessionResponse(val response: SessionResponse = SessionResponse.UNKNOWN, val message: Component = Component.empty())
 
 enum class SessionResponse {
     INITIALIZED,
@@ -18,7 +18,11 @@ enum class SessionResponse {
     UNKNOWN
 }
 
-enum class StopSessionReason(val translationKey: String) {
-    DISCONNECTED("proxy.session.stop.disconnected"),
-    UNKNOWN("proxy.session.stop.unknown")
+data class StopSessionReason(val cause: SessionStopCause, val message: Component = Component.empty())
+
+enum class SessionStopCause {
+    DISCONNECTED,
+    KICKED,
+    BANNED,
+    UNKNOWN
 }
