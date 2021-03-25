@@ -44,7 +44,13 @@ class VelocityBridge @Inject constructor(private val proxy: ProxyServer, private
     }
 
     private fun handleServerDiscovery() {
+        // Get all servers currently registered.
+        this.discoveryService.getServers().forEach(this.proxy::registerServer)
+
+        // Listen for servers registering.
         this.discoveryService.addRegisterServerListener(this.proxy::registerServer)
+
+        // Listen for servers unregistering.
         this.discoveryService.addUnregisterServerListener(this.proxy::unregisterServer)
     }
 

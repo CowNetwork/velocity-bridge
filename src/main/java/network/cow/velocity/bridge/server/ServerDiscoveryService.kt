@@ -26,4 +26,6 @@ abstract class ServerDiscoveryService {
         this.serverUnregisterListeners.forEach { it(server) }
     }
 
+    abstract fun getServers(): Set<ServerInfo>
+
 }
