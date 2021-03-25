@@ -18,10 +18,10 @@ abstract class PlayerSessionService {
     }
 
     /**
-     * Called by the [PlayerSessionService], after a [Session] for the given [uuid] has been closed.
+     * Called by the [PlayerSessionService], after a [Session] for the given [playerId] has been closed.
      */
-    protected fun onStopSession(uuid: UUID, sessionResult: StopSessionResult, session: Session) {
-        this.stopSessionListeners.forEach { it(uuid, sessionResult, session) }
+    protected fun onStopSession(playerId: UUID, sessionResult: StopSessionResult, session: Session) {
+        this.stopSessionListeners.forEach { it(playerId, sessionResult, session) }
     }
 
     /**
@@ -31,9 +31,9 @@ abstract class PlayerSessionService {
     abstract fun startSession(player: Player): InitializePlayerSessionResponse
 
     /**
-     * Stops any active [Session] for the given [uuid] gracefully.
+     * Stops any active [Session] for the given [playerId] gracefully.
      */
-    abstract fun stopSession(uuid: UUID)
+    abstract fun stopSession(playerId: UUID)
 
     /**
      * Stops any active [Session] for the given [player] gracefully.
