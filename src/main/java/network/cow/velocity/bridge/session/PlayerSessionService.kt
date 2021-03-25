@@ -18,13 +18,6 @@ abstract class PlayerSessionService {
     }
 
     /**
-     * Removes a listener previously added using [addStopSessionListener].
-     */
-    fun removeStopSessionListener(listener: (UUID, StopSessionResult, Session) -> Unit) {
-        this.stopSessionListeners.remove(listener)
-    }
-
-    /**
      * Called by the [PlayerSessionService], after a [Session] for the given [uuid] has been closed.
      */
     protected fun onStopSession(uuid: UUID, sessionResult: StopSessionResult, session: Session) {

@@ -24,5 +24,5 @@ enum class SessionStopCause {
     DISCONNECTED,
     KICKED,
     BANNED,
-    UNKNOWN
+    OTHER
 }
