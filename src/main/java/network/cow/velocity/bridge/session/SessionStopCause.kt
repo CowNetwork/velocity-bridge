@@ -47,7 +47,7 @@ data class SessionStopPlayerBanned(val banId: UUID, val reason: String, val bann
 
     override fun buildMessage(): Component {
         val durationKey = if (duration.isNegative) Translations.SESSION_BANNED_DURATION_PERMANENT else Translations.SESSION_BANNED_DURATION_UNTIL
-        val bannedUntil = bannedAt.plusSeconds(if (duration.isNegative) Long.MAX_VALUE else duration.toSeconds())
+        val bannedUntil = bannedAt.plusSeconds(if (duration.isNegative) Long.MAX_VALUE else duration.seconds)
 
         return Component.text(Translations.SESSION_STOPPED_BANNED) // TODO: translate with (durationKey and bannedUntil)
             .append(Component.newline())

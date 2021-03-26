@@ -2,11 +2,17 @@ package network.cow.velocity.bridge
 
 import com.google.inject.Inject
 import com.velocitypowered.api.event.PostOrder
+import com.velocitypowered.api.event.Subscribe
 import com.velocitypowered.api.event.connection.DisconnectEvent
 import com.velocitypowered.api.event.connection.LoginEvent
 import com.velocitypowered.api.event.player.PlayerChooseInitialServerEvent
+import com.velocitypowered.api.event.player.PlayerSettingsChangedEvent
 import com.velocitypowered.api.plugin.Plugin
 import com.velocitypowered.api.proxy.ProxyServer
+import dev.benedikt.localize.LocalizeService
+import dev.benedikt.localize.getLocale
+import dev.benedikt.localize.json.JsonHttpLocaleProvider
+import net.kyori.adventure.audience.MessageType
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import network.cow.velocity.bridge.distribution.InMemoryPlayerDistributionService
@@ -19,6 +25,10 @@ import network.cow.velocity.bridge.session.SessionInitialized
 import network.cow.velocity.bridge.session.SessionRejected
 import network.cow.velocity.bridge.session.SessionStopPlayerDisconnected
 import org.slf4j.Logger
+import com.velocitypowered.api.event.proxy.ProxyInitializeEvent
+import dev.benedikt.localize.translateSync
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
+import kotlin.system.measureTimeMillis
 
 /**
  * @author Benedikt Wüller
@@ -35,13 +45,35 @@ class VelocityBridge @Inject constructor(private val proxy: ProxyServer, private
     private val playerService: PlayerDistributionService = InMemoryPlayerDistributionService()
 
     init {
+        this.initializeLocales()
+    }
+
+    @Subscribe
+    fun onProxyInitialization(event: ProxyInitializeEvent?) {
         this.handleServerDiscovery()
         this.handlePlayerSessions()
         this.handlePlayerDistribution()
 
-        // TODO: translations and handle locale change
-
         this.logger.info("Big bridges befall big balled boys.")
+    }
+
+    // TODO: make configurable
+    private fun initializeLocales() {
+        LocalizeService.provideLocale("en_US", JsonHttpLocaleProvider(
+            "https://raw.githubusercontent.com/CowNetwork/translations/main/proxy/en_US.json",
+            "https://raw.githubusercontent.com/CowNetwork/translations/main/session/en_US.json"
+        ))
+
+        LocalizeService.provideLocale("de_DE", JsonHttpLocaleProvider(
+            "https://raw.githubusercontent.com/CowNetwork/translations/main/proxy/de_DE.json",
+            "https://raw.githubusercontent.com/CowNetwork/translations/main/session/de_DE.json"
+        ))
+
+        // Always load english and german locales.
+        LocalizeService.setCoreLocale("en_US")
+        LocalizeService.setCoreLocale("de_DE")
+
+        LocalizeService.fallbackLocale = "en_US"
     }
 
     // TODO: logging
@@ -63,6 +95,7 @@ class VelocityBridge @Inject constructor(private val proxy: ProxyServer, private
             val result = this.sessionService.startSession(player)
 
             if (result is SessionInitialized) {
+                LocalizeService.setLocale(player, player.getLocale())
                 this.logger.info("Session has been initialized for player ${player.username} (${player.uniqueId}).")
                 return@register
             }
@@ -90,6 +123,15 @@ class VelocityBridge @Inject constructor(private val proxy: ProxyServer, private
             // Otherwise, build the message to kick the player with.
             player.disconnect(cause.buildMessage())
         }
+
+        // Handle locale updates.
+        this.proxy.eventManager.register(this, PlayerSettingsChangedEvent::class.java, PostOrder.FIRST) {
+            val locale = it.getLocale()
+            val player = it.player
+
+            LocalizeService.setLocale(player, locale)
+            this.sessionService.updateLocale(player.uniqueId, locale)
+        }
     }
 
     // TODO: logging
@@ -99,7 +141,7 @@ class VelocityBridge @Inject constructor(private val proxy: ProxyServer, private
             val server = this.playerService.getInitialServer(it.player.uniqueId)?.let(this.proxy::getServer)
 
             // If the initial server does not exist, kick the player.
-            if (server == null || server.isEmpty) {
+            if (server == null || !server.isPresent) {
                 val message = Component.text(Translations.ERROR_INITIAL_SERVER_NOT_FOUND).color(NamedTextColor.RED) // TODO: translate
                 it.player.disconnect(message)
                 return@register
@@ -114,9 +156,9 @@ class VelocityBridge @Inject constructor(private val proxy: ProxyServer, private
             val server = this.proxy.getServer(serverName)
 
             // If the server does not exist, send a message to the affected player.
-            if (server.isEmpty) {
+            if (!server.isPresent) {
                 val message = Component.text(Translations.ERROR_SERVER_NOT_FOUND).color(NamedTextColor.RED) // TODO: translate
-                player.sendMessage(message)
+                player.sendMessage(message, MessageType.SYSTEM)
                 return@addPlayerMoveListener
             }
 

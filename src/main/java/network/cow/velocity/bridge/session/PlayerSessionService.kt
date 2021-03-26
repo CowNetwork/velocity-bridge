@@ -1,6 +1,7 @@
 package network.cow.velocity.bridge.session
 
 import com.velocitypowered.api.proxy.Player
+import com.velocitypowered.api.proxy.player.PlayerSettings
 import java.util.UUID
 
 /**
@@ -28,6 +29,16 @@ abstract class PlayerSessionService {
      * Creates a new session for the given [player] and returns the resulting [InitializeSessionResult] synchronously.
      */
     abstract fun startSession(player: Player): InitializeSessionResult
+
+    /**
+     * Updates the [locale] for the given [playerId].
+     */
+    abstract fun updateLocale(playerId: UUID, locale: String)
+
+    /**
+     * Updates the [chatMode] for the given [playerId].
+     */
+    abstract fun updateChatMode(playerId: UUID, chatMode: PlayerSettings.ChatMode)
 
     /**
      * Stops any active [Session] for the given [playerId] gracefully.
