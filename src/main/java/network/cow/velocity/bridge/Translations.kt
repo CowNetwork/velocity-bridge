@@ -11,11 +11,12 @@ import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
  */
 
 object Translations {
-    const val COMMON_ID = "common.id"
     const val COMMON_REASON = "common.reason"
     const val COMMON_ERROR = "common.error"
 
-    const val COMMON_DATETIME = "common.date_time.date_time_format"
+    const val COMMON_DATE_FORMAT = "common.date_time.date_format"
+    const val COMMON_TIME_FORMAT = "common.date_time.time_format"
+    const val COMMON_DATE_AT_TIME = "common.date_time.date_at_time"
 
     const val ERROR_INITIAL_SERVER_NOT_FOUND = "proxy.errors.initial_server_not_found"
     const val ERROR_SERVER_NOT_FOUND = "proxy.errors.server_not_found"

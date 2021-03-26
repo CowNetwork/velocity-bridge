@@ -17,9 +17,9 @@ class InMemoryPlayerSessionService : PlayerSessionService() {
 
     override fun startSession(player: Player): InitializeSessionResult {
         this.stopSession(player)
-//        val session = Session(UUID.randomUUID(), player.username, player.getLocale(), player.playerSettings.chatMode)
-//        this.sessions[player.uniqueId] = session
-        return SessionRejected(SessionStopPlayerBanned(UUID.randomUUID(), UUID.randomUUID(), "COCK_TOO_LARGE", getCurrentDate(), Duration.ofDays(7)))
+        val session = Session(UUID.randomUUID(), player.username, player.getLocale(), player.playerSettings.chatMode)
+        this.sessions[player.uniqueId] = session
+        return SessionInitialized()
     }
 
     override fun updateLocale(playerId: UUID, locale: String) {

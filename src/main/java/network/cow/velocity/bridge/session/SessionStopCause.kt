@@ -15,31 +15,35 @@ import java.util.UUID
 /**
  * @author Benedikt Wüller
  */
-abstract class SessionStopCause(private val sessionId: UUID) {
+abstract class SessionStopCause(private val sessionId: UUID?) {
 
     fun buildMessage(player: Player): Component {
         val sessionIdComponent = Component.text(this.sessionId.toString()).color(NamedTextColor.WHITE)
-        return this.getComponent(player)
-            .append(Component.newline())
-            .append(Component.newline())
-            .append(player.translateComponent(Translations.SESSION_ID, NamedTextColor.GRAY, sessionIdComponent))
+        return if (this.sessionId != null) {
+            this.getComponent(player)
+                .append(Component.newline())
+                .append(Component.newline())
+                .append(player.translateComponent(Translations.SESSION_ID, NamedTextColor.GRAY, sessionIdComponent))
+        } else {
+            this.getComponent(player)
+        }
     }
 
     protected open fun getComponent(player: Player): Component = Component.empty()
 
 }
 
-class SessionStopPlayerDisconnected(sessionId: UUID) : SessionStopCause(sessionId)
+class SessionStopPlayerDisconnected(sessionId: UUID?) : SessionStopCause(sessionId)
 
-class SessionStopMaintenance(sessionId: UUID) : SessionStopCause(sessionId) {
+class SessionStopMaintenance(sessionId: UUID?) : SessionStopCause(sessionId) {
     override fun getComponent(player: Player) = player.translateComponent(Translations.SESSION_STOPPED_MAINTENANCE, NamedTextColor.RED)
 }
 
-class SessionStopUnknown(sessionId: UUID) : SessionStopCause(sessionId) {
+class SessionStopUnknown(sessionId: UUID?) : SessionStopCause(sessionId) {
     override fun getComponent(player: Player) = player.translateComponent(Translations.SESSION_STOPPED_UNKNOWN, NamedTextColor.RED)
 }
 
-class SessionStopError(sessionId: UUID, private val error: String) : SessionStopCause(sessionId) {
+class SessionStopError(sessionId: UUID?, private val error: String) : SessionStopCause(sessionId) {
 
     override fun getComponent(player: Player): Component {
         return player.translateComponent(Translations.SESSION_STOPPED_ERROR, NamedTextColor.RED)
@@ -50,7 +54,7 @@ class SessionStopError(sessionId: UUID, private val error: String) : SessionStop
 
 }
 
-class SessionStopPlayerKicked(sessionId: UUID, private val reason: String) : SessionStopCause(sessionId) {
+class SessionStopPlayerKicked(sessionId: UUID?, private val reason: String) : SessionStopCause(sessionId) {
 
     override fun getComponent(player: Player): Component {
         return player.translateComponent(Translations.SESSION_STOPPED_KICKED, NamedTextColor.RED)
@@ -62,7 +66,7 @@ class SessionStopPlayerKicked(sessionId: UUID, private val reason: String) : Ses
 }
 
 class SessionStopPlayerBanned(
-    sessionId: UUID,
+    sessionId: UUID?,
     private val banId: UUID,
     private val reason: String,
     private val bannedAt: ZonedDateTime,
@@ -73,9 +77,16 @@ class SessionStopPlayerBanned(
         val banDurationComponent = if (duration.isNegative) {
             player.translateComponent(Translations.SESSION_BANNED_DURATION_PERMANENT, NamedTextColor.WHITE)
         } else {
-            val dateTimeFormat = player.translateSync(Translations.COMMON_DATETIME)
-            val formattedDate = DateTimeFormatter.ofPattern(dateTimeFormat).format(bannedAt.plusSeconds(duration.seconds))
-            player.translateComponent(Translations.SESSION_BANNED_DURATION_UNTIL, formattedDate.toComponent())
+            val dateTime = bannedAt.plusSeconds(duration.seconds)
+
+            val dateFormat = player.translateSync(Translations.COMMON_DATE_FORMAT)
+            val formattedDate = DateTimeFormatter.ofPattern(dateFormat).format(dateTime).toComponent().color(NamedTextColor.WHITE)
+
+            val timeFormat = player.translateSync(Translations.COMMON_TIME_FORMAT)
+            val formattedTime = DateTimeFormatter.ofPattern(timeFormat).format(dateTime).toComponent().color(NamedTextColor.WHITE)
+
+            val dateAtTimeComponent = player.translateComponent(Translations.COMMON_DATE_AT_TIME, NamedTextColor.RED, formattedDate, formattedTime)
+            player.translateComponent(Translations.SESSION_BANNED_DURATION_UNTIL, NamedTextColor.RED, dateAtTimeComponent)
         }
 
         return player.translateComponent(Translations.SESSION_STOPPED_BANNED, NamedTextColor.RED, banDurationComponent)

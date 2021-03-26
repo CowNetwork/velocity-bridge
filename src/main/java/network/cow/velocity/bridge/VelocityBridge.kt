@@ -5,7 +5,6 @@ import com.velocitypowered.api.event.PostOrder
 import com.velocitypowered.api.event.Subscribe
 import com.velocitypowered.api.event.connection.DisconnectEvent
 import com.velocitypowered.api.event.connection.LoginEvent
-import com.velocitypowered.api.event.connection.PostLoginEvent
 import com.velocitypowered.api.event.player.PlayerChooseInitialServerEvent
 import com.velocitypowered.api.event.player.PlayerSettingsChangedEvent
 import com.velocitypowered.api.plugin.Plugin
@@ -27,9 +26,6 @@ import network.cow.velocity.bridge.session.SessionRejected
 import network.cow.velocity.bridge.session.SessionStopPlayerDisconnected
 import org.slf4j.Logger
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent
-import dev.benedikt.localize.translateSync
-import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
-import kotlin.system.measureTimeMillis
 
 /**
  * @author Benedikt Wüller
@@ -60,17 +56,21 @@ class VelocityBridge @Inject constructor(private val proxy: ProxyServer, private
 
     // TODO: make configurable
     private fun initializeLocales() {
-        LocalizeService.provideLocale("en_US", JsonHttpLocaleProvider(
-            "https://raw.githubusercontent.com/CowNetwork/translations/main/common/en_US.json",
-            "https://raw.githubusercontent.com/CowNetwork/translations/main/proxy/en_US.json",
-            "https://raw.githubusercontent.com/CowNetwork/translations/main/session/en_US.json"
-        ))
+        LocalizeService.provideLocale(
+            "en_US", JsonHttpLocaleProvider(
+                "https://raw.githubusercontent.com/CowNetwork/translations/main/common/en_US.json",
+                "https://raw.githubusercontent.com/CowNetwork/translations/main/proxy/en_US.json",
+                "https://raw.githubusercontent.com/CowNetwork/translations/main/session/en_US.json"
+            )
+        )
 
-        LocalizeService.provideLocale("de_DE", JsonHttpLocaleProvider(
-            "https://raw.githubusercontent.com/CowNetwork/translations/main/common/de_DE.json",
-            "https://raw.githubusercontent.com/CowNetwork/translations/main/proxy/de_DE.json",
-            "https://raw.githubusercontent.com/CowNetwork/translations/main/session/de_DE.json"
-        ))
+        LocalizeService.provideLocale(
+            "de_DE", JsonHttpLocaleProvider(
+                "https://raw.githubusercontent.com/CowNetwork/translations/main/common/de_DE.json",
+                "https://raw.githubusercontent.com/CowNetwork/translations/main/proxy/de_DE.json",
+                "https://raw.githubusercontent.com/CowNetwork/translations/main/session/de_DE.json"
+            )
+        )
 
         // Always load english and german locales.
         LocalizeService.setCoreLocale("en_US")
@@ -93,11 +93,11 @@ class VelocityBridge @Inject constructor(private val proxy: ProxyServer, private
 
     private fun handlePlayerSessions() {
         // When a player joins the proxy, start a new session.
-        this.proxy.eventManager.register(this, PostLoginEvent::class.java, PostOrder.FIRST) {
+        this.proxy.eventManager.register(this, LoginEvent::class.java, PostOrder.FIRST) {
             val player = it.player
             val result = this.sessionService.startSession(player)
 
-            // TODO: find another source for the locale as it has not yet been provided by the player.
+            // TODO: find another source for the locale as it has not yet been provided by the client.
             //       maybe use the locale of the last session, if there is one.
             LocalizeService.setLocale(player, player.getLocale())
 
@@ -145,11 +145,12 @@ class VelocityBridge @Inject constructor(private val proxy: ProxyServer, private
         this.proxy.eventManager.register(this, PlayerChooseInitialServerEvent::class.java, PostOrder.FIRST) {
             // Request the initial server for this player.
             val server = this.playerService.getInitialServer(it.player.uniqueId)?.let(this.proxy::getServer)
+            val player = it.player
 
             // If the initial server does not exist, kick the player.
             if (server == null || !server.isPresent) {
-                val message = Component.text(Translations.ERROR_INITIAL_SERVER_NOT_FOUND).color(NamedTextColor.RED) // TODO: translate
-                it.player.disconnect(message)
+                val message = player.translateComponent(Translations.ERROR_INITIAL_SERVER_NOT_FOUND, NamedTextColor.RED)
+                player.disconnect(message)
                 return@register
             }
 
@@ -163,7 +164,7 @@ class VelocityBridge @Inject constructor(private val proxy: ProxyServer, private
 
             // If the server does not exist, send a message to the affected player.
             if (!server.isPresent) {
-                val message = Component.text(Translations.ERROR_SERVER_NOT_FOUND).color(NamedTextColor.RED) // TODO: translate
+                val message = player.translateComponent(Translations.ERROR_SERVER_NOT_FOUND, NamedTextColor.RED)
                 player.sendMessage(message, MessageType.SYSTEM)
                 return@addPlayerMoveListener
             }
@@ -173,10 +174,11 @@ class VelocityBridge @Inject constructor(private val proxy: ProxyServer, private
                 if (it.isSuccessful) return@thenAccept
 
                 // If the server rejected the connection, send a message to the affected player.
-                val message = Component.text(Translations.ERROR_SERVER_CONNECTION_FAILED).color(NamedTextColor.RED) // TODO: translate
-                    .append(Component.space())
-                    .append(Component.text("(${it.status})").color(NamedTextColor.DARK_GRAY))
-
+                val message = player.translateComponent(
+                    Translations.ERROR_SERVER_CONNECTION_FAILED,
+                    NamedTextColor.RED,
+                    Component.space().append(it.status.toComponent().color(NamedTextColor.DARK_GRAY))
+                )
                 player.sendMessage(message)
             }
         }
