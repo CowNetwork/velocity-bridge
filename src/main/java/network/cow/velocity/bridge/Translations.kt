@@ -11,14 +11,18 @@ import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
  */
 
 object Translations {
-    const val COMMON_ID = "proxy.common.id"
-    const val COMMON_REASON = "proxy.common.reason"
-    const val COMMON_ERROR = "proxy.common.error"
+    const val COMMON_ID = "common.id"
+    const val COMMON_REASON = "common.reason"
+    const val COMMON_ERROR = "common.error"
+
+    const val COMMON_DATETIME = "common.date_time.date_time_format"
 
     const val ERROR_INITIAL_SERVER_NOT_FOUND = "proxy.errors.initial_server_not_found"
     const val ERROR_SERVER_NOT_FOUND = "proxy.errors.server_not_found"
     const val ERROR_SERVER_CONNECTION_FAILED = "proxy.errors.server_connection_failed"
 
+    const val SESSION_ID = "session.id"
+    const val SESSION_BAN_ID = "session.ban_id"
     const val SESSION_STOPPED_KICKED = "session.stop_causes.kicked"
     const val SESSION_STOPPED_BANNED = "session.stop_causes.banned"
     const val SESSION_STOPPED_MAINTENANCE = "session.stop_causes.maintenance"
@@ -50,3 +54,5 @@ fun Any.translateComponent(key: String, color: TextColor, vararg params: Compone
     }
     return component
 }
+
+fun Any.toComponent(): Component = Component.text(this.toString())

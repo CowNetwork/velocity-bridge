@@ -1,59 +1,89 @@
 package network.cow.velocity.bridge.session
 
+import com.velocitypowered.api.proxy.Player
+import dev.benedikt.localize.translateSync
 import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.NamedTextColor
 import network.cow.velocity.bridge.Translations
+import network.cow.velocity.bridge.toComponent
+import network.cow.velocity.bridge.translateComponent
 import java.time.Duration
 import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 /**
  * @author Benedikt Wüller
  */
-interface SessionStopCause {
-    fun buildMessage(): Component = Component.empty()
-}
+abstract class SessionStopCause(private val sessionId: UUID) {
 
-class SessionStopPlayerDisconnected : SessionStopCause
-
-class SessionStopMaintenance : SessionStopCause {
-    override fun buildMessage() = Component.text(Translations.SESSION_STOPPED_MAINTENANCE) // TODO: translate
-}
-
-class SessionStopUnknown : SessionStopCause {
-    override fun buildMessage() = Component.text(Translations.SESSION_STOPPED_UNKNOWN) // TODO: translate
-}
-
-class SessionStopError(val error: String) : SessionStopCause {
-    override fun buildMessage(): Component {
-        return Component.text(Translations.SESSION_STOPPED_ERROR) // TODO: translate
+    fun buildMessage(player: Player): Component {
+        val sessionIdComponent = Component.text(this.sessionId.toString()).color(NamedTextColor.WHITE)
+        return this.getComponent(player)
             .append(Component.newline())
-            .append(Component.text(Translations.COMMON_ERROR)) // TODO: translate with error
-    }
-}
-
-data class SessionStopPlayerKicked(val kickId: UUID, val reason: String) : SessionStopCause {
-
-    override fun buildMessage(): Component {
-        return Component.text(Translations.SESSION_STOPPED_KICKED) // TODO: translate
             .append(Component.newline())
-            .append(Component.text(Translations.COMMON_REASON)) // TODO: translate with reason
-            .append(Component.newline())
-            .append(Component.text(Translations.COMMON_ID)) // TODO: translate with id
+            .append(player.translateComponent(Translations.SESSION_ID, NamedTextColor.GRAY, sessionIdComponent))
     }
 
+    protected open fun getComponent(player: Player): Component = Component.empty()
+
 }
 
-data class SessionStopPlayerBanned(val banId: UUID, val reason: String, val bannedAt: ZonedDateTime, val duration: Duration) : SessionStopCause {
+class SessionStopPlayerDisconnected(sessionId: UUID) : SessionStopCause(sessionId)
 
-    override fun buildMessage(): Component {
-        val durationKey = if (duration.isNegative) Translations.SESSION_BANNED_DURATION_PERMANENT else Translations.SESSION_BANNED_DURATION_UNTIL
-        val bannedUntil = bannedAt.plusSeconds(if (duration.isNegative) Long.MAX_VALUE else duration.seconds)
+class SessionStopMaintenance(sessionId: UUID) : SessionStopCause(sessionId) {
+    override fun getComponent(player: Player) = player.translateComponent(Translations.SESSION_STOPPED_MAINTENANCE, NamedTextColor.RED)
+}
 
-        return Component.text(Translations.SESSION_STOPPED_BANNED) // TODO: translate with (durationKey and bannedUntil)
+class SessionStopUnknown(sessionId: UUID) : SessionStopCause(sessionId) {
+    override fun getComponent(player: Player) = player.translateComponent(Translations.SESSION_STOPPED_UNKNOWN, NamedTextColor.RED)
+}
+
+class SessionStopError(sessionId: UUID, private val error: String) : SessionStopCause(sessionId) {
+
+    override fun getComponent(player: Player): Component {
+        return player.translateComponent(Translations.SESSION_STOPPED_ERROR, NamedTextColor.RED)
             .append(Component.newline())
-            .append(Component.text(Translations.COMMON_REASON)) // TODO: translate with reason
             .append(Component.newline())
-            .append(Component.text(Translations.COMMON_ID)) // TODO: translate with id
+            .append(player.translateComponent(Translations.COMMON_ERROR, NamedTextColor.GRAY, this.error.toComponent().color(NamedTextColor.WHITE)))
+    }
+
+}
+
+class SessionStopPlayerKicked(sessionId: UUID, private val reason: String) : SessionStopCause(sessionId) {
+
+    override fun getComponent(player: Player): Component {
+        return player.translateComponent(Translations.SESSION_STOPPED_KICKED, NamedTextColor.RED)
+            .append(Component.newline())
+            .append(Component.newline())
+            .append(player.translateComponent(Translations.COMMON_REASON, NamedTextColor.GRAY, this.reason.toComponent().color(NamedTextColor.WHITE)))
+    }
+
+}
+
+class SessionStopPlayerBanned(
+    sessionId: UUID,
+    private val banId: UUID,
+    private val reason: String,
+    private val bannedAt: ZonedDateTime,
+    private val duration: Duration
+) : SessionStopCause(sessionId) {
+
+    override fun getComponent(player: Player): Component {
+        val banDurationComponent = if (duration.isNegative) {
+            player.translateComponent(Translations.SESSION_BANNED_DURATION_PERMANENT, NamedTextColor.WHITE)
+        } else {
+            val dateTimeFormat = player.translateSync(Translations.COMMON_DATETIME)
+            val formattedDate = DateTimeFormatter.ofPattern(dateTimeFormat).format(bannedAt.plusSeconds(duration.seconds))
+            player.translateComponent(Translations.SESSION_BANNED_DURATION_UNTIL, formattedDate.toComponent())
+        }
+
+        return player.translateComponent(Translations.SESSION_STOPPED_BANNED, NamedTextColor.RED, banDurationComponent)
+            .append(Component.newline())
+            .append(Component.newline())
+            .append(player.translateComponent(Translations.SESSION_BAN_ID, NamedTextColor.GRAY, this.banId.toComponent().color(NamedTextColor.WHITE)))
+            .append(Component.newline())
+            .append(player.translateComponent(Translations.COMMON_REASON, NamedTextColor.GRAY, this.reason.toComponent().color(NamedTextColor.WHITE)))
     }
 
 }

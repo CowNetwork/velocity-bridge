@@ -4,6 +4,8 @@ import com.velocitypowered.api.proxy.Player
 import com.velocitypowered.api.proxy.player.PlayerSettings
 import dev.benedikt.localize.getLocale
 import network.cow.velocity.bridge.getCurrentDate
+import java.time.Duration
+import java.time.temporal.TemporalUnit
 import java.util.UUID
 
 /**
@@ -15,8 +17,9 @@ class InMemoryPlayerSessionService : PlayerSessionService() {
 
     override fun startSession(player: Player): InitializeSessionResult {
         this.stopSession(player)
-        this.sessions[player.uniqueId] = Session(player.username, player.getLocale(), player.playerSettings.chatMode)
-        return SessionInitialized()
+//        val session = Session(UUID.randomUUID(), player.username, player.getLocale(), player.playerSettings.chatMode)
+//        this.sessions[player.uniqueId] = session
+        return SessionRejected(SessionStopPlayerBanned(UUID.randomUUID(), UUID.randomUUID(), "COCK_TOO_LARGE", getCurrentDate(), Duration.ofDays(7)))
     }
 
     override fun updateLocale(playerId: UUID, locale: String) {
@@ -30,7 +33,7 @@ class InMemoryPlayerSessionService : PlayerSessionService() {
     override fun stopSession(playerId: UUID) {
         val session = this.sessions.remove(playerId) ?: return
         session.stoppedAt = getCurrentDate()
-        this.onStopSession(playerId, SessionStopPlayerDisconnected(), session)
+        this.onStopSession(playerId, SessionStopPlayerDisconnected(session.id), session)
     }
 
 }

@@ -5,6 +5,7 @@ import com.velocitypowered.api.event.PostOrder
 import com.velocitypowered.api.event.Subscribe
 import com.velocitypowered.api.event.connection.DisconnectEvent
 import com.velocitypowered.api.event.connection.LoginEvent
+import com.velocitypowered.api.event.connection.PostLoginEvent
 import com.velocitypowered.api.event.player.PlayerChooseInitialServerEvent
 import com.velocitypowered.api.event.player.PlayerSettingsChangedEvent
 import com.velocitypowered.api.plugin.Plugin
@@ -60,11 +61,13 @@ class VelocityBridge @Inject constructor(private val proxy: ProxyServer, private
     // TODO: make configurable
     private fun initializeLocales() {
         LocalizeService.provideLocale("en_US", JsonHttpLocaleProvider(
+            "https://raw.githubusercontent.com/CowNetwork/translations/main/common/en_US.json",
             "https://raw.githubusercontent.com/CowNetwork/translations/main/proxy/en_US.json",
             "https://raw.githubusercontent.com/CowNetwork/translations/main/session/en_US.json"
         ))
 
         LocalizeService.provideLocale("de_DE", JsonHttpLocaleProvider(
+            "https://raw.githubusercontent.com/CowNetwork/translations/main/common/de_DE.json",
             "https://raw.githubusercontent.com/CowNetwork/translations/main/proxy/de_DE.json",
             "https://raw.githubusercontent.com/CowNetwork/translations/main/session/de_DE.json"
         ))
@@ -90,19 +93,22 @@ class VelocityBridge @Inject constructor(private val proxy: ProxyServer, private
 
     private fun handlePlayerSessions() {
         // When a player joins the proxy, start a new session.
-        this.proxy.eventManager.register(this, LoginEvent::class.java, PostOrder.FIRST) {
+        this.proxy.eventManager.register(this, PostLoginEvent::class.java, PostOrder.FIRST) {
             val player = it.player
             val result = this.sessionService.startSession(player)
 
+            // TODO: find another source for the locale as it has not yet been provided by the player.
+            //       maybe use the locale of the last session, if there is one.
+            LocalizeService.setLocale(player, player.getLocale())
+
             if (result is SessionInitialized) {
-                LocalizeService.setLocale(player, player.getLocale())
                 this.logger.info("Session has been initialized for player ${player.username} (${player.uniqueId}).")
                 return@register
             }
 
             if (result is SessionRejected) {
                 // If the session could not be initialized, kick the player with the corresponding message.
-                player.disconnect(result.cause.buildMessage())
+                player.disconnect(result.cause.buildMessage(player))
                 this.logger.info("Session couldn't be initialized for player ${player.username} (${player.uniqueId}). Cause: ${result.cause}.")
                 return@register
             }
@@ -121,7 +127,7 @@ class VelocityBridge @Inject constructor(private val proxy: ProxyServer, private
             val player = this.proxy.getPlayer(uuid).orElse(null) ?: return@addStopSessionListener
 
             // Otherwise, build the message to kick the player with.
-            player.disconnect(cause.buildMessage())
+            player.disconnect(cause.buildMessage(player))
         }
 
         // Handle locale updates.
