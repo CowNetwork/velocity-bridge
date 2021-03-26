@@ -15,8 +15,9 @@ import network.cow.velocity.bridge.server.DummyServerDiscoveryService
 import network.cow.velocity.bridge.server.ServerDiscoveryService
 import network.cow.velocity.bridge.session.InMemoryPlayerSessionService
 import network.cow.velocity.bridge.session.PlayerSessionService
-import network.cow.velocity.bridge.session.SessionResponse
-import network.cow.velocity.bridge.session.SessionStopCause
+import network.cow.velocity.bridge.session.SessionInitialized
+import network.cow.velocity.bridge.session.SessionRejected
+import network.cow.velocity.bridge.session.SessionStopPlayerDisconnected
 import org.slf4j.Logger
 
 /**
@@ -43,6 +44,7 @@ class VelocityBridge @Inject constructor(private val proxy: ProxyServer, private
         this.logger.info("Big bridges befall big balled boys.")
     }
 
+    // TODO: logging
     private fun handleServerDiscovery() {
         // Get all servers currently registered.
         this.discoveryService.getServers().forEach(this.proxy::registerServer)
@@ -59,19 +61,18 @@ class VelocityBridge @Inject constructor(private val proxy: ProxyServer, private
         this.proxy.eventManager.register(this, LoginEvent::class.java, PostOrder.FIRST) {
             val player = it.player
             val result = this.sessionService.startSession(player)
-            if (result.response == SessionResponse.INITIALIZED) {
+
+            if (result is SessionInitialized) {
                 this.logger.info("Session has been initialized for player ${player.username} (${player.uniqueId}).")
                 return@register
             }
 
-            // If the session could not be initialized, kick the player with the corresponding message.
-            val message = result.message
-                .append(Component.space())
-                .append(Component.text("(${result.response})").color(NamedTextColor.DARK_GRAY))
-
-            player.disconnect(message)
-
-            this.logger.info("Session couldn't be initialized for player ${player.username} (${player.uniqueId}). Response: ${result.response}.")
+            if (result is SessionRejected) {
+                // If the session could not be initialized, kick the player with the corresponding message.
+                player.disconnect(result.cause.buildMessage())
+                this.logger.info("Session couldn't be initialized for player ${player.username} (${player.uniqueId}). Cause: ${result.cause}.")
+                return@register
+            }
         }
 
         // When a player disconnected, stop the current session.
@@ -79,22 +80,19 @@ class VelocityBridge @Inject constructor(private val proxy: ProxyServer, private
             this.sessionService.stopSession(it.player)
         }
 
-        this.sessionService.addStopSessionListener { uuid, result, session ->
-            this.logger.info("Session has been stopped for player ${session.username} ($uuid) with reason $result: $session")
+        this.sessionService.addStopSessionListener { uuid, cause, session ->
+            this.logger.info("Session has been stopped for player ${session.username} ($uuid) with reason $cause: $session")
 
             // If the session has been stopped because the player disconnected (see listener above), or the player is no longer online, do nothing.
-            if (result.cause == SessionStopCause.DISCONNECTED) return@addStopSessionListener
+            if (cause is SessionStopPlayerDisconnected) return@addStopSessionListener
             val player = this.proxy.getPlayer(uuid).orElse(null) ?: return@addStopSessionListener
 
             // Otherwise, build the message to kick the player with.
-            val message = result.message
-                .append(Component.space())
-                .append(Component.text(" ($result)").color(NamedTextColor.DARK_GRAY))
-
-            player.disconnect(message)
+            player.disconnect(cause.buildMessage())
         }
     }
 
+    // TODO: logging
     private fun handlePlayerDistribution() {
         this.proxy.eventManager.register(this, PlayerChooseInitialServerEvent::class.java, PostOrder.FIRST) {
             // Request the initial server for this player.

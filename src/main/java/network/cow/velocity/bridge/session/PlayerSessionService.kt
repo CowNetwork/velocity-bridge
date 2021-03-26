@@ -8,27 +8,26 @@ import java.util.UUID
  */
 abstract class PlayerSessionService {
 
-    private val stopSessionListeners = mutableListOf<(UUID, StopSessionResult, Session) -> Unit>()
+    private val stopSessionListeners = mutableListOf<(UUID, SessionStopCause, Session) -> Unit>()
 
     /**
      * Adds a listener to call, after a [Session] has been closed for any given [UUID].
      */
-    fun addStopSessionListener(listener: (UUID, StopSessionResult, Session) -> Unit) {
+    fun addStopSessionListener(listener: (UUID, SessionStopCause, Session) -> Unit) {
         this.stopSessionListeners.add(listener)
     }
 
     /**
      * Called by the [PlayerSessionService], after a [Session] for the given [playerId] has been closed.
      */
-    protected fun onStopSession(playerId: UUID, sessionResult: StopSessionResult, session: Session) {
-        this.stopSessionListeners.forEach { it(playerId, sessionResult, session) }
+    protected fun onStopSession(playerId: UUID, cause: SessionStopCause, session: Session) {
+        this.stopSessionListeners.forEach { it(playerId, cause, session) }
     }
 
     /**
-     * Creates a new session for the given [player] and returns the resulting [InitializePlayerSessionResponse] synchronously.
-     * [InitializePlayerSessionResponse.response] will equal [SessionResponse.INITIALIZED] if the [Session] has been created.
+     * Creates a new session for the given [player] and returns the resulting [InitializeSessionResult] synchronously.
      */
-    abstract fun startSession(player: Player): InitializePlayerSessionResponse
+    abstract fun startSession(player: Player): InitializeSessionResult
 
     /**
      * Stops any active [Session] for the given [playerId] gracefully.

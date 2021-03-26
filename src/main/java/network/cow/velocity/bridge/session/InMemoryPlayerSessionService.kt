@@ -11,16 +11,16 @@ class InMemoryPlayerSessionService : PlayerSessionService() {
 
     private val sessions = mutableMapOf<UUID, Session>()
 
-    override fun startSession(player: Player): InitializePlayerSessionResponse {
+    override fun startSession(player: Player): InitializeSessionResult {
         this.stopSession(player)
         this.sessions[player.uniqueId] = Session(player.username)
-        return InitializePlayerSessionResponse(SessionResponse.INITIALIZED)
+        return SessionInitialized()
     }
 
     override fun stopSession(playerId: UUID) {
         val session = this.sessions.remove(playerId) ?: return
         session.stoppedAt = getCurrentDate()
-        this.onStopSession(playerId, StopSessionResult(SessionStopCause.DISCONNECTED), session)
+        this.onStopSession(playerId, SessionStopPlayerDisconnected(), session)
     }
 
 }

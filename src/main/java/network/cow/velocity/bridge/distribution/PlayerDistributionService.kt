@@ -13,7 +13,7 @@ abstract class PlayerDistributionService {
         this.playerMoveListeners.add(listener)
     }
 
-    protected fun onPlayerMove(playerId: UUID, server: String) {
+    protected fun onPlayerChangeServer(playerId: UUID, server: String) {
         this.playerMoveListeners.forEach { it(playerId, server) }
     }
 
